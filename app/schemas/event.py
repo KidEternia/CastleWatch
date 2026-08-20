@@ -6,7 +6,6 @@ from pydantic import BaseModel, ConfigDict
 class SecurityEventCreate(BaseModel):
     source_system: str
     event_type: str
-    severity: str
     source_ip: str | None = None
     destination_ip: str | None = None
     username: str | None = None
@@ -14,8 +13,19 @@ class SecurityEventCreate(BaseModel):
     raw_log: str | None = None
 
 
-class SecurityEventResponse(SecurityEventCreate):
+class SecurityEventResponse(BaseModel):
     id: int
     timestamp: datetime
+
+    source_system: str
+    event_type: str
+    severity: str
+
+    source_ip: str | None = None
+    destination_ip: str | None = None
+    username: str | None = None
+
+    message: str
+    raw_log: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
