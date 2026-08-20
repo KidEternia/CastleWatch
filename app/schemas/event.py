@@ -19,7 +19,10 @@ class SecurityEventResponse(BaseModel):
 
     source_system: str
     event_type: str
+
     severity: str
+    risk_score: int
+    detection_name: str | None = None
 
     source_ip: str | None = None
     destination_ip: str | None = None

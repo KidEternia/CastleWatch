@@ -31,10 +31,7 @@ def create_event(
 ):
     recent_count = 1
 
-    if (
-        event.event_type == "authentication_failure"
-        and event.source_ip
-    ):
+    if event.event_type == "authentication_failure" and event.source_ip:
         five_minutes_ago = datetime.utcnow() - timedelta(minutes=5)
 
         statement = select(func.count(SecurityEvent.id)).where(
@@ -46,14 +43,14 @@ def create_event(
         previous_count = db.scalar(statement) or 0
         recent_count = previous_count + 1
 
-    risk_score, severity, detection = calculate_risk(
+    risk_score, severity, detection_name = calculate_risk(
         event_type=event.event_type,
         username=event.username,
         recent_event_count=recent_count,
     )
 
     print(
-        f"[DETECTION] {detection} | "
+        f"[DETECTION] {detection_name} | "
         f"Source: {event.source_ip} | "
         f"Risk: {risk_score}/100 | "
         f"Severity: {severity}"
@@ -62,6 +59,8 @@ def create_event(
     db_event = SecurityEvent(
         **event.model_dump(),
         severity=severity,
+        risk_score=risk_score,
+        detection_name=detection_name,
     )
 
     db.add(db_event)
