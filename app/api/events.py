@@ -43,7 +43,14 @@ def create_event(
         previous_count = db.scalar(statement) or 0
         recent_count = previous_count + 1
 
-    risk_score, severity, detection_name = calculate_risk(
+    (
+        risk_score,
+        severity,
+        detection_name,
+        mitre_technique_id,
+        mitre_technique_name,
+        mitre_tactic,
+    ) = calculate_risk(
         event_type=event.event_type,
         username=event.username,
         recent_event_count=recent_count,
@@ -53,7 +60,8 @@ def create_event(
         f"[DETECTION] {detection_name} | "
         f"Source: {event.source_ip} | "
         f"Risk: {risk_score}/100 | "
-        f"Severity: {severity}"
+        f"Severity: {severity} | "
+        f"MITRE: {mitre_technique_id or 'N/A'}"
     )
 
     db_event = SecurityEvent(
@@ -61,6 +69,9 @@ def create_event(
         severity=severity,
         risk_score=risk_score,
         detection_name=detection_name,
+        mitre_technique_id=mitre_technique_id,
+        mitre_technique_name=mitre_technique_name,
+        mitre_tactic=mitre_tactic,
     )
 
     db.add(db_event)

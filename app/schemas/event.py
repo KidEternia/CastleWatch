@@ -24,6 +24,10 @@ class SecurityEventResponse(BaseModel):
     risk_score: int
     detection_name: str | None = None
 
+    mitre_technique_id: str | None = None
+    mitre_technique_name: str | None = None
+    mitre_tactic: str | None = None
+
     source_ip: str | None = None
     destination_ip: str | None = None
     username: str | None = None
