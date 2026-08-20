@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.database.database import SessionLocal
 from app.detection.engine import calculate_risk
 from app.models.event import SecurityEvent
+from app.models.incident import Incident
 from app.schemas.event import SecurityEventCreate, SecurityEventResponse
 
 router = APIRouter(
@@ -78,11 +79,68 @@ def create_event(
     db.commit()
     db.refresh(db_event)
 
+    if severity in {"high", "critical"}:
+        existing_incident_statement = select(Incident).where(
+            Incident.status == "open",
+            Incident.source_ip == event.source_ip,
+            Incident.detection_name == detection_name,
+        )
+
+        existing_incident = db.scalar(existing_incident_statement)
+
+        if existing_incident is not None:
+            existing_incident.event_count += 1
+            existing_incident.updated_at = datetime.utcnow()
+
+            if severity == "critical":
+                existing_incident.severity = "critical"
+
+            db.commit()
+            db.refresh(existing_incident)
+
+            print(
+                f"[INCIDENT] Updated incident #{existing_incident.id} | "
+                f"Events: {existing_incident.event_count} | "
+                f"Source: {event.source_ip}"
+            )
+
+        else:
+            incident = Incident(
+                status="open",
+                severity=severity,
+                title=detection_name,
+                description=(
+                    f"CastleWatch automatically created this incident "
+                    f"from security event #{db_event.id}."
+                ),
+                source_ip=event.source_ip,
+                destination_ip=event.destination_ip,
+                event_id=db_event.id,
+                event_count=1,
+                detection_name=detection_name,
+                mitre_technique_id=mitre_technique_id,
+                mitre_technique_name=mitre_technique_name,
+                mitre_tactic=mitre_tactic,
+            )
+
+            db.add(incident)
+            db.commit()
+            db.refresh(incident)
+
+            print(
+                f"[INCIDENT] Created incident #{incident.id} | "
+                f"Event #{db_event.id} | "
+                f"{detection_name} | "
+                f"Severity: {severity}"
+            )
+
     return db_event
 
 
 @router.get("/", response_model=list[SecurityEventResponse])
-def get_events(db: Session = Depends(get_db)):
+def get_events(
+    db: Session = Depends(get_db),
+):
     statement = (
         select(SecurityEvent)
         .order_by(SecurityEvent.timestamp.desc())

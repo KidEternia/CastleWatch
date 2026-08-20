@@ -1,4 +1,3 @@
-
 import os
 from logging.config import fileConfig
 
@@ -7,7 +6,12 @@ from dotenv import load_dotenv
 from sqlalchemy import engine_from_config, pool
 
 from app.database.database import Base
+
+# Import every SQLAlchemy model so all tables are registered
+# with Base.metadata before Alembic performs autogeneration.
 from app.models.event import SecurityEvent
+from app.models.incident import Incident
+
 
 load_dotenv()
 
@@ -21,7 +25,10 @@ database_url = os.getenv("DATABASE_URL")
 if not database_url:
     raise RuntimeError("DATABASE_URL is not configured")
 
-config.set_main_option("sqlalchemy.url", database_url)
+config.set_main_option(
+    "sqlalchemy.url",
+    database_url,
+)
 
 target_metadata = Base.metadata
 
@@ -33,7 +40,9 @@ def run_migrations_offline() -> None:
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
+        dialect_opts={
+            "paramstyle": "named",
+        },
         compare_type=True,
     )
 
@@ -43,7 +52,10 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
+        config.get_section(
+            config.config_ini_section,
+            {},
+        ),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
